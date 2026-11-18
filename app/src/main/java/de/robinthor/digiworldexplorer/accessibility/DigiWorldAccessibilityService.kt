@@ -14,12 +14,11 @@ import de.robinthor.digiworldexplorer.detection.Cell
 import de.robinthor.digiworldexplorer.detection.GridBounds
 import de.robinthor.digiworldexplorer.detection.HudCounters
 import de.robinthor.digiworldexplorer.strategy.AutomationState
-import de.robinthor.digiworldexplorer.license.SupporterLicenseManager
 
 class DigiWorldAccessibilityService:AccessibilityService(){
  private var overlay:GridOverlayView?=null
  private var quickControls:QuickControlOverlay?=null
- override fun onServiceConnected(){instance=this;showOverlay();val prefs=getSharedPreferences("settings",MODE_PRIVATE);if(SupporterLicenseManager.load(this)!=null&&prefs.getBoolean("quick_overlay_enabled",false))setQuickControlsEnabled(true);setOverlayEnabled(AutomationState.overlayEnabled)}
+ override fun onServiceConnected(){instance=this;showOverlay();val prefs=getSharedPreferences("settings",MODE_PRIVATE);if(prefs.getBoolean("quick_overlay_enabled",false))setQuickControlsEnabled(true);setOverlayEnabled(AutomationState.overlayEnabled)}
  override fun onAccessibilityEvent(event:AccessibilityEvent?)=Unit
  override fun onInterrupt()=Unit
  override fun onDestroy(){quickControls?.destroy();quickControls=null;removeOverlay();if(instance===this)instance=null;super.onDestroy()}
@@ -34,7 +33,7 @@ class DigiWorldAccessibilityService:AccessibilityService(){
  fun clearCalibrationOverlay(){overlay?.post{overlay?.bounds=null;overlay?.visibility=View.GONE;overlay?.invalidate()}}
  fun setOverlayEnabled(enabled:Boolean){overlay?.post{overlay?.visibility=if(enabled)View.VISIBLE else View.GONE};quickControls?.refresh()}
  fun setQuickControlsEnabled(enabled:Boolean){
-  if(enabled&&SupporterLicenseManager.load(this)!=null){if(quickControls==null)quickControls=QuickControlOverlay(this).also{it.show()}}
+  if(enabled){if(quickControls==null)quickControls=QuickControlOverlay(this).also{it.show()}}
   else{quickControls?.destroy();quickControls=null}
  }
  fun hideForCapture(){overlay?.post{overlay?.captureMode=true;overlay?.invalidate()}}

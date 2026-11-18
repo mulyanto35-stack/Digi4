@@ -27,7 +27,6 @@ import de.robinthor.digiworldexplorer.capture.ScreenCaptureService
 import de.robinthor.digiworldexplorer.dungeon.DungeonFrameAnalyzer
 import de.robinthor.digiworldexplorer.feed.FeedFrameAnalyzer
 import de.robinthor.digiworldexplorer.feed.StageFailedFrameAnalyzer
-import de.robinthor.digiworldexplorer.license.SupporterLicenseManager
 import de.robinthor.digiworldexplorer.network.NetworkDefenseFrameAnalyzer
 import de.robinthor.digiworldexplorer.purchase.RewardPurchaseFrameAnalyzer
 import de.robinthor.digiworldexplorer.strategy.AutoMoveController
@@ -187,12 +186,10 @@ class QuickControlOverlay(private val service: DigiWorldAccessibilityService) {
                 FeedFrameAnalyzer.reset()
             }
             "auto_network_defense" -> {
-                val allowed = enabled && SupporterLicenseManager.load(service) != null
-                AutomationState.autoNetworkDefenseEnabled = allowed
-                if (allowed != enabled) preferences.edit().putBoolean(preferenceKey, allowed).apply()
+                AutomationState.autoNetworkDefenseEnabled = enabled
                 NetworkDefenseFrameAnalyzer.reset()
                 StageFailedFrameAnalyzer.reset()
-                featureSwitches[preferenceKey]?.isChecked = allowed
+                featureSwitches[preferenceKey]?.isChecked = enabled
             }
         }
     }
@@ -203,7 +200,7 @@ class QuickControlOverlay(private val service: DigiWorldAccessibilityService) {
         featureSwitches["auto_dungeon"]?.isChecked = preferences.getBoolean("auto_dungeon", true)
         featureSwitches["auto_feed"]?.isChecked = preferences.getBoolean("auto_feed", false)
         featureSwitches["auto_network_defense"]?.isChecked =
-            SupporterLicenseManager.load(service) != null && preferences.getBoolean("auto_network_defense", false)
+            preferences.getBoolean("auto_network_defense", false)
         syncingFeatureSwitches = false
     }
 
@@ -217,11 +214,10 @@ class QuickControlOverlay(private val service: DigiWorldAccessibilityService) {
     }
 
     private fun reloadAutomation() {
-        val supporter = SupporterLicenseManager.load(service) != null
         AutomationState.overlayEnabled = preferences.getBoolean("grid_enabled", true)
         AutomationState.autoPurchaseEnabled = preferences.getBoolean("auto_purchase", true)
         AutomationState.autoDungeonEnabled = preferences.getBoolean("auto_dungeon", true)
-        AutomationState.autoNetworkDefenseEnabled = supporter && preferences.getBoolean("auto_network_defense", false)
+        AutomationState.autoNetworkDefenseEnabled = preferences.getBoolean("auto_network_defense", false)
         AutomationState.autoFeedEnabled = preferences.getBoolean("auto_feed", false)
         AutomationState.dwsNavigationSettings = AutomationState.dwsNavigationSettings.copy(blindStageFailedTap = true)
         RewardPurchaseFrameAnalyzer.reset()
