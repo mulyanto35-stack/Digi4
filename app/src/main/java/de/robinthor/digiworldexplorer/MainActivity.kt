@@ -156,7 +156,7 @@ class MainActivity : ComponentActivity() {
         AutomationState.autoDungeonEnabled = autoDungeon
         AutomationState.autoNetworkDefenseEnabled = autoNetworkDefense
         AutomationState.autoFeedEnabled = autoFeed
-        AutomationState.dwsNavigationSettings = DwsNavigationSettings(destroyAllPyramids = true, allowLeft = !dwsNeverLeft, forceForwardAttack = dwsForceForwardAttack, dashSpamUntilZero = dwsDashSpam, collectOnlyEnergy = dwsOnlyEnergy, betterEnergyCollect = dwsBetterCollect, blindStageFailedTap = dwsBlindStageTap)
+        AutomationState.dwsNavigationSettings = DwsNavigationSettings(allowLeft = !dwsNeverLeft, forceForwardAttack = dwsForceForwardAttack, dashSpamUntilZero = dwsDashSpam, collectOnlyEnergy = dwsOnlyEnergy, betterEnergyCollect = dwsBetterCollect, blindStageFailedTap = dwsBlindStageTap)
         AutomationState.forceLegacyCaptureMetrics = legacyCapture
         AutomationState.summonTouchCorrection = summonTouchCorrection
         DigiWorldAccessibilityService.instance?.setOverlayEnabled(grid)
@@ -248,7 +248,6 @@ class MainActivity : ComponentActivity() {
                     dwsBetterCollect = true
                     dwsBlindStageTap = true
                     AutomationState.dwsNavigationSettings = DwsNavigationSettings(
-            destroyAllPyramids = true,
                         allowLeft = !dwsNeverLeft,
                         forceForwardAttack = dwsForceForwardAttack,
                         dashSpamUntilZero = dwsDashSpam,
@@ -325,7 +324,7 @@ class MainActivity : ComponentActivity() {
                 onRemove = {
                     SupporterLicenseManager.remove(this)
                     supporterLicense = null
-                    dwsNeverLeft = false; dwsForceForwardAttack = false; dwsDashSpam = false; dwsOnlyEnergy = false; dwsBetterCollect = true; dwsBlindStageTap = true; AutomationState.dwsNavigationSettings = DwsNavigationSettings(destroyAllPyramids = true, blindStageFailedTap = true)
+                    dwsNeverLeft = false; dwsForceForwardAttack = false; dwsDashSpam = false; dwsOnlyEnergy = false; dwsBetterCollect = true; dwsBlindStageTap = true; AutomationState.dwsNavigationSettings = DwsNavigationSettings(blindStageFailedTap = true)
                     settings.edit().putBoolean("dws_never_left", false).putBoolean("dws_force_forward_attack", false).putBoolean("dws_dash_spam", false).putBoolean("dws_only_energy", false).putBoolean("dws_better_collect", true).putBoolean("dws_blind_stage_tap", true).apply()
                 },
                 onDonate = { openUrl(getString(R.string.supporter_purchase_url)) },

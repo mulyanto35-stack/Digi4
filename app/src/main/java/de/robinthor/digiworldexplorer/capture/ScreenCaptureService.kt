@@ -329,6 +329,7 @@ class ScreenCaptureService : Service() {
         FeedFrameAnalyzer.reset()
         StageFailedFrameAnalyzer.reset()
         CaptureFrameAnalyzer.resetCalibration()
+        CaptureFrameAnalyzer.release()
         val activeProjection = projection
         projection = null
         activeProjection?.unregisterCallback(projectionCallback)

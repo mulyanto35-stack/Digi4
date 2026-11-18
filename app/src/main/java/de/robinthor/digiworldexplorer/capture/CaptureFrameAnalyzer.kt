@@ -26,8 +26,13 @@ object CaptureFrameAnalyzer {
     /** Zulaessige Abweichung je Kante zwischen zwei Frames in Pixeln. */
     private const val BOUNDS_TOLERANCE = 4
     /** Mindestabstand zwischen zwei Diagnose-PNGs in Millisekunden. */
-    private const val DIAGNOSTIC_INTERVAL = 60_000L
+    private const val DIAGNOSTIC_INTERVAL = 300_000L
     @Volatile private var lastDiagnostic = 0L
+    /** Dipakai ulang antar-frame (hanya dipanggil dari thread analisis): menghindari ~14 MB alokasi per analisis
+     *  pada 720x1600 dan menekan GC. Dilepas saat capture berhenti. */
+    private var paddedBitmap: Bitmap? = null
+    private var pixelBuffer: IntArray? = null
+    fun release() { paddedBitmap = null; pixelBuffer = null } // tanpa recycle(): thread analisis mungkin masih memakainya; GC yang melepas
 
     @Volatile private var calibrated: de.robinthor.digiworldexplorer.detection.GridDetection? = null
     @Volatile private var pending: de.robinthor.digiworldexplorer.detection.GridDetection? = null
@@ -52,13 +57,18 @@ object CaptureFrameAnalyzer {
     fun analyze(context:Context,image:Image,width:Int,height:Int):Result?=runCatching{
         val plane=image.planes.first()
         val paddedWidth=plane.rowStride/plane.pixelStride
-        val padded=Bitmap.createBitmap(paddedWidth,height,Bitmap.Config.ARGB_8888)
+        var padded=paddedBitmap
+        if(padded==null||padded.isRecycled||padded.width!=paddedWidth||padded.height!=height){
+            padded?.recycle()
+            padded=Bitmap.createBitmap(paddedWidth,height,Bitmap.Config.ARGB_8888)
+            paddedBitmap=padded
+        }
+        plane.buffer.rewind()
         padded.copyPixelsFromBuffer(plane.buffer)
-        val frame=Bitmap.createBitmap(padded,0,0,width,height)
-        if(frame!==padded)padded.recycle()
-
-        val pixels=IntArray(width*height)
-        frame.getPixels(pixels,0,width,0,0,width,height)
+        var pixels=pixelBuffer
+        if(pixels==null||pixels.size!=width*height){pixels=IntArray(width*height);pixelBuffer=pixels}
+        padded.getPixels(pixels,0,width,0,0,width,height)
+        val diagnosticDue=android.os.SystemClock.elapsedRealtime()-lastDiagnostic>=DIAGNOSTIC_INTERVAL
         var detection=calibrated ?: GridDetector.detect(width,height,pixels)?.takeIf { it.confidence>=CANDIDATE_MIN }
         var cells=detection?.let { CellClassifier.classify(width,height,pixels,it.bounds) }
         if(calibrated==null&&detection!=null){
@@ -71,7 +81,7 @@ object CaptureFrameAnalyzer {
             } else { detection=null;cells=null }
         }
         val preview=detection?.let { PreviewClassifier.classify(width,height,pixels,it.bounds) } ?: emptyMap()
-        val directory=File(context.getExternalFilesDir(null) ?: context.filesDir,"diagnostics").apply{mkdirs()}
+        val directory by lazy{File(context.getExternalFilesDir(null) ?: context.filesDir,"diagnostics").apply{mkdirs()}}
         var gameVisible=false
         if(detection!=null && cells!=null){
             val player=cells.maxByOrNull { it.value.player }
@@ -86,8 +96,8 @@ object CaptureFrameAnalyzer {
             // Aufgezeichnet sind bisher nur die Ziffern 1 und 2. Unbekannte Formen werden hier
             // ausgegeben, damit die fehlenden Vorlagen aus echten Spielstaenden ergaenzt werden koennen.
             if(hud.unknown.isNotEmpty())android.util.Log.i("DigiWorldHud","unbekannte Ziffer "+hud.unknown)
-            val summary="confidence="+detection.confidence+"\nplayer="+player?.key+" score="+player?.value?.player+"\nitems="+items+"\nobstacles="+obstacles+"\npreview="+preview+"\ndash="+dashButton+"\nkrallen="+hud.claws+" dashvorrat="+hud.dash+"\n"
-            if(android.os.SystemClock.elapsedRealtime()-lastDiagnostic>=DIAGNOSTIC_INTERVAL){
+            if(diagnosticDue){
+                val summary="confidence="+detection.confidence+"\nplayer="+player?.key+" score="+player?.value?.player+"\nitems="+items+"\nobstacles="+obstacles+"\npreview="+preview+"\ndash="+dashButton+"\nkrallen="+hud.claws+" dashvorrat="+hud.dash+"\n"
                 File(directory,"latest_detection.txt").writeText(summary)
                 android.util.Log.i("DigiWorldDetection",summary.replace("\n","; "))
             }
@@ -97,11 +107,13 @@ object CaptureFrameAnalyzer {
         }
         // Der PNG-Export kostet bei 1080x2400 mehr als die gesamte Analyse. Nach der Kalibrierung
         // laeuft diese mit rund 3 Hz, deshalb wird der Diagnoseframe nur noch gedrosselt geschrieben.
-        val output=File(directory,"dynamic_grid.png")
-        val now=android.os.SystemClock.elapsedRealtime()
-        if(now-lastDiagnostic>=DIAGNOSTIC_INTERVAL){
-            lastDiagnostic=now
-            val diagnostic=frame.copy(Bitmap.Config.ARGB_8888,true)
+        var outputPath=""
+        if(diagnosticDue){
+            lastDiagnostic=android.os.SystemClock.elapsedRealtime()
+            val output=File(directory,"dynamic_grid.png")
+            outputPath=output.absolutePath
+            val diagnostic=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888)
+            diagnostic.setPixels(pixels,0,width,0,0,width,height)
             val canvas=Canvas(diagnostic)
             val paint=Paint().apply{color=Color.GREEN;style=Paint.Style.STROKE;strokeWidth=(width/180f).coerceAtLeast(3f)}
             detection?.bounds?.let{b->
@@ -116,7 +128,6 @@ object CaptureFrameAnalyzer {
             FileOutputStream(output).use{diagnostic.compress(Bitmap.CompressFormat.PNG,90,it)}
             diagnostic.recycle()
         }
-        frame.recycle()
-        Result(gameVisible,detection?.confidence?:0.0,output.absolutePath)
+        Result(gameVisible,detection?.confidence?:0.0,outputPath)
     }.onFailure{ android.util.Log.e("DigiWorldCapture","analyze failed",it) }.getOrNull()
 }
