@@ -8,70 +8,69 @@ import de.robinthor.digiworldexplorer.input.SafeTapRandomizer
 import de.robinthor.digiworldexplorer.detection.*
 object AutoMoveController{
  private const val MIN_GRID=.82;private const val MIN_PLAYER=.08
- /** Mindestabstand zwischen zwei Taps. 800 ms geben dem Spiel Zeit fuer Animation + Dialog
-  *  und der Analyse ein sauber gerendertes Bild. */
+ /** Minimum interval between two taps. 800 ms gives the game time for animation + dialog
+  *  and gives the analysis a cleanly rendered frame. */
  private const val TAP_DELAY=800L
- /** So viele Analysen ohne Positionswechsel gelten als festgefahren - erst dann ist ein Dash erlaubt. */
+ /** This many analyses without a position change count as stuck - only then is a Dash allowed. */
  private const val STUCK_FRAMES=10
- /** HUD-Ziffern sind auf manchen Aufloesungen nicht sicher lesbar. Drei ist der begrenzte
-  * Fallback fuer den bestaetigten Testvorrat; drei Fehlversuche sperren weitere Dashes. */
+ /** HUD digits are not reliably readable at some resolutions. Three is the bounded fallback
+  * for the confirmed test supply; three failed attempts block further Dashes. */
  private const val UNKNOWN_DASH_FALLBACK=3
  private const val UNKNOWN_CLAW_FALLBACK=4
- /** So viele Analysen ohne echten Rechts-Fortschritt (Brett scrollt nicht) gelten ebenfalls als
-  *  festgefahren. Reines Stillstehen (STUCK_FRAMES) erkennt keine Einkesselung, in der die Figur
-  *  zwischen wenigen Zellen hin- und herlaeuft, ohne je auf derselben Zelle zu verharren - dann
-  *  wurde nie gedasht, obwohl kein Weg herausfuehrte. */
+ /** This many analyses without real rightward progress (board does not scroll) also count as
+  *  stuck. Pure standing still (STUCK_FRAMES) does not detect being boxed in, where the player
+  *  paces back and forth between a few cells without ever staying on the same cell - in that case
+  *  no Dash was ever used even though no way out existed. */
  private const val NO_PROGRESS_LIMIT=25
- /** Nach fuenf wirklich ausgefuehrten Aktionen ohne Brett- oder Rechtsfortschritt wird komplett
-  *  gestoppt. Das verhindert endlose 2-3-Zellen-Schleifen und spart Schritte. */
+ /** After five actually executed actions without board or rightward progress, everything stops.
+  *  This prevents endless 2-3-cell loops and saves steps. */
  private const val MAX_FAILED_ACTIONS=5
- /** So viele Analysen ohne erkannten Spieler, bis die Verfolgung komplett neu aufgesetzt wird. */
+ /** This many analyses without a detected player until tracking is reset completely. */
  private const val LOST_LIMIT=15
- /** So viele ruhige Analysen darf ein erwartetes Zugziel unerreicht bleiben, bevor es verworfen
-  *  wird. Beim Laufen nach rechts scrollt das Brett mit, die Figur bleibt dann auf derselben
-  *  Bildschirmzelle - das erwartete Ziel wird in diesem Fall nie erreicht. */
+ /** This many quiet analyses an expected move target may stay unreached before it is discarded.
+  *  When running right, the board scrolls along and the player stays on the same screen cell -
+  *  in that case the expected target is never reached. */
  private const val EXPECTED_TTL=4
- /** Zwei Bilder gelten als gleich, wenn sich kein Zellwert um mehr als diesen Betrag unterscheidet.
-  *  Vorher wurde auf exakte Gleichheit gerundeter Werte geprueft - lag ein Score genau auf einer
-  *  Rundungsgrenze, kippte er dauerhaft zwischen zwei Stufen und das Bild galt nie als ruhig. */
+ /** Two images count as equal if no cell value differs by more than this amount.
+  *  Previously exact equality of rounded values was checked - if a score sat exactly on a rounding
+  *  boundary, it flipped permanently between two levels and the image never counted as quiet. */
  private const val SETTLE_TOLERANCE=.02
- /** Notbremse, falls das Bild wegen dauerhafter Animation nie ruhig wird. */
+ /** Emergency brake in case the image never becomes quiet because of permanent animation. */
  private const val SETTLE_LIMIT=12
- /** Bleibt die Tap-Rueckmeldung aus, haengt die Automatik sonst fuer immer. */
+ /** If the tap feedback never arrives, the automation would otherwise hang forever. */
  private const val PENDING_TIMEOUT=2500L
- /** So viele Schritte werden am Stueck getippt, wenn ein Collectable das Ziel ist. */
+ /** This many steps are tapped in one burst when a collectable is the target. */
  private const val BURST_ITEM=2
- /** Ohne Collectable zaehlt nur Strecke - dann laufen wir gleich so weit am Stueck. */
+ /** Without a collectable only distance counts - then we walk that far in one go. */
  private const val BURST_RIGHT=3
- /** Abstand der Taps innerhalb eines Buendels. Muss die Laufanimation abdecken. */
- /** Abstand zwischen Burst-Taps - gleich wie TAP_DELAY, damit jeder Tap
-  *  im selben 0,8-s-Rhythmus landet und die Analyse dazwischen sauber lesen kann. */
+ /** Spacing of the taps within a burst. Must cover the walking animation. */
+ /** Spacing between burst taps - same as TAP_DELAY, so that every tap lands in the same
+  *  0.8 s rhythm and the analysis can read cleanly in between. */
  private const val BURST_DELAY=800L
- /** Ab diesem Schriftanteil gilt eine Zelle als von einer Meldung ueberdeckt. */
+ /** From this text share on, a cell counts as covered by a message. */
  private const val DIALOG_TEXT=.08
- /** So viele ueberdeckte Zellen gelten als Dialog - eine Meldung zieht sich ueber das ganze Brett. */
+ /** This many covered cells count as a dialog - a message spans the entire board. */
  private const val DIALOG_CELLS=3
  private const val BLIND_STAGE_INTERVAL=10_000L
  private const val DWS_CONTEXT_TTL=8_000L
  private val main=Handler(Looper.getMainLooper());private val history=ArrayDeque<Cell>();private val recentItems=mutableMapOf<Cell,Int>()
  private var candidate:Cell?=null;private var stable=0;private var lastTap=0L;private var nextTapDelay=TAP_DELAY;private var pending=false;private var previous:Cell?=null;private var expected:Cell?=null
- /** Wird gesetzt, sobald onAnalysis eine Meldung im Bild erkennt. dispatchBurst liest diesen
-  *  Wert auf dem Main-Thread, daher volatile. Ein laufendes Burst-Buendel bricht ab, sobald
-  *  die Analyse einen Dialog meldet - ohne diese Pruefung landen die nachfolgenden Taps blind
-  *  in der gerade angezeigten Fehlermeldung des Spiels. */
+ /** Set as soon as onAnalysis detects a message in the image. dispatchBurst reads this value on
+  *  the main thread, hence volatile. A running burst aborts as soon as the analysis reports a
+  *  dialog - without this check, the following taps would land blindly in the error message the
+  *  game is currently showing. */
  @Volatile private var dialogActive=false
  private val forbiddenObstacles=mutableSetOf<Cell>();private var lastAttackTarget:Cell?=null;private var lastAttackPlayer:Cell?=null;private var unchangedAttackFrames=0
  private var sameCellFrames=0;private var furthestCol=-1;private var trackingConfirmed=false;private var lostFrames=0;private var noProgressFrames=0;private var dashFailures=0;private var actionsWithoutProgress=0
- /** Ressourcen werden nicht blind wiederholt: Bleibt nach Angriff/Dash Position und Brett
-  *  zweimal unveraendert, gilt die Aktion fuer diese Sitzung als leer oder unwirksam. */
+ /** Resources are not blindly repeated: if position and board stay unchanged twice after an
+  *  attack/Dash, the action counts as empty or ineffective for this session. */
  private var lastResourceKind:ActionKind?=null;private var resourcePlayer:Cell?=null;private var resourceUnchangedFrames=0
  private var attackUnavailable=false;private var dashUnavailable=false;private var dashBlockedUntil=0L
  private var lastDwsGridSeen=0L;private var lastBlindStageTap=0L
  private var lastSignature:List<Double> = emptyList();private var lastSettledSignature:List<Double> = emptyList();private var expectedAge=0;private var unsettledFrames=0
- /** Laeuft die Figur nach rechts, scrollt bei diesem Spiel das Brett mit und die Figur bleibt auf
-  *  derselben Bildschirmzelle. Das wird nicht angenommen, sondern am ersten Einzelschritt gemessen -
-  *  ohne dieses Wissen laesst sich kein zweiter Tap im Voraus berechnen, also wird auch nicht
-  *  gebuendelt, solange der Wert `null` ist. */
+ /** When the player runs right, this game scrolls the board along and the player stays on the same
+  *  screen cell. This is not assumed but measured on the first single step - without this knowledge
+  *  no second tap can be computed in advance, so nothing is bundled while the value is `null`. */
  private var rightScrolls:Boolean?=null;private var probeFrom:Cell?=null;private var expectedRight:Cell?=null
  fun onAnalysis(confidence:Double,bounds:GridBounds,cells:Map<Cell,CellScores>,preview:Map<Cell,CellScores>,dashButton:Pair<Float,Float>?=null,hud:HudCounters=HudCounters()){
   // Die Zelle, auf der die Figur steht (bzw. gleich stehen wird), darf nie als Item gesperrt

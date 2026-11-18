@@ -6,11 +6,11 @@ import org.junit.Test
 import javax.imageio.ImageIO
 
 /**
- * Echter Geraete-Frame, in dem das Spiel mehrere Zellen hellblau als erreichbar markiert und die
- * Figur auf einer dieser Markierungen steht. Gemessen wurden hier Pyramiden-Anteile von 0.81-0.89
- * auf den Hindernisfeldern und ein Schattenwert von 0.128 auf der Figur - der Frame ist also
- * eindeutig, obwohl das Geraet in derselben Sekunde voellig falsche Werte gemeldet hat. Die
- * Fehlmessung stammte aus einem Zwischenbild der Scroll-Animation, nicht aus dem Klassifikator.
+ * Real device frame in which the game highlights several cells light blue as reachable and the
+ * character stands on one of these highlights. Pyramid shares of 0.81-0.89 were measured on the
+ * obstacle cells and a shadow value of 0.128 on the character - so the frame is unambiguous even
+ * though the device reported completely wrong values in the same second. The wrong measurement
+ * came from an intermediate frame of the scroll animation, not from the classifier.
  */
 class HighlightFrameDetectionTest {
 

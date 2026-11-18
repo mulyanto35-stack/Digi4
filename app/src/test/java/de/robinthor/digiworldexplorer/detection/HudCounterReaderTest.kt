@@ -7,9 +7,9 @@ import org.junit.Test
 import javax.imageio.ImageIO
 
 /**
- * Echter Geraeteframe mit Pfoten 197, Krallen 1 und Dash 2. Die Ziffern sind Outline-Glyphen,
- * die Vorlagen stammen aus genau diesem Bild - der Test sichert damit vor allem ab, dass Bandlage,
- * Segmentierung und Normierung stabil bleiben, wenn an der Erkennung geschraubt wird.
+ * Real device frame with paws 197, claws 1 and Dash 2. The digits are outline glyphs, the
+ * templates come from exactly this image - so the test mainly ensures that band position,
+ * segmentation and normalisation stay stable when the recognition is being tweaked.
  */
 class HudCounterReaderTest {
 
@@ -32,8 +32,8 @@ class HudCounterReaderTest {
     }
 
     /**
-     * Zweiter Geraeteframe, aufgenommen nachdem eine Kralle nachgewachsen war. Hier liegt das
-     * Overlay bereits mit im Bild - der Kasten um die Zahl darf sie also nicht verdecken.
+     * Second device frame, captured after a claw had regrown. Here the overlay is already in the
+     * image - so the box around the number must not cover it.
      */
     @Test
     fun readsRegeneratedClawCount() {

@@ -6,11 +6,10 @@ import org.junit.Test
 import javax.imageio.ImageIO
 
 /**
- * Zweiter echter Geraete-Frame (Samsung SM-G998B, 1080x2400) mit dunkler Nachtszene und
- * geoeffnetem Belohnungs-Panel. Die Geometrie ist identisch zum hellen Frame, die
- * Linienkonfidenz faellt aber von ~0.84 auf ~0.74. Dieser Test haelt fest, dass die
- * Erkennung geometrisch weiterhin exakt ist - die Kalibrierung darf sich also nicht auf
- * eine hohe Kontrastschwelle stuetzen.
+ * Second real device frame (Samsung SM-G998B, 1080x2400) with a dark night scene and an opened
+ * reward panel. The geometry is identical to the bright frame, but the line confidence drops
+ * from ~0.84 to ~0.74. This test pins down that detection stays geometrically exact - so
+ * calibration must not rely on a high contrast threshold.
  */
 class DarkSceneDetectionTest {
 

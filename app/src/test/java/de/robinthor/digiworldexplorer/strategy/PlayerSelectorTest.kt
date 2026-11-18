@@ -9,9 +9,9 @@ class PlayerSelectorTest{
  @Test fun acceptsExpectedMove(){val target=Cell(3,2);assertEquals(target,PlayerSelector.select(mapOf(target to s(.10)),Cell(3,1),target,emptySet())?.key)}
 
  /**
-  * Regression: das eigene Sprite faerbt die Zelle als Item ein, wodurch die Spielerzelle in
-  * recentItems landete und der Selektor sie dauerhaft verwarf - die Figur galt fuer immer als
-  * "unsicher". Die zuletzt bestaetigte Zelle muss trotz Item-Sperre waehlbar bleiben.
+  * Regression: the player's own sprite colours the cell as an item, which put the player cell
+  * into recentItems and the selector discarded it permanently - the character counted as
+  * "uncertain" forever. The last confirmed cell must stay selectable despite the item lock.
   */
  @Test fun keepsTrackingWhenOwnCellLooksLikeItem(){
   val player=Cell(4,2)

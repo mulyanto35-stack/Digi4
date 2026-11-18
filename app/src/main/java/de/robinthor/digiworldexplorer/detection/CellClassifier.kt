@@ -4,15 +4,15 @@ data class Cell(val row:Int,val col:Int)
 data class CellScores(
  val player:Double,val orange:Double,val pink:Double,val green:Double,
  val item:Double,val pyramid:Double,val highlight:Double,
- /** Anteil heller, entsaettigter Pixel - praktisch nur Dialogschrift. Diente frueher als
-  *  Spielermerkmal und hat dabei jede Fehlermeldung zur Spielfigur erklaert. */
+ /** Share of bright, desaturated pixels - practically only dialog text. It used to serve as a
+  *  player feature and thereby declared every error message to be the player sprite. */
  val text:Double=0.0,
 ){fun obstacle():Boolean=pyramid>.30&&item<=.06}
 
 object CellClassifier{
- /** Abtastschritt in Pixeln. Alle Kennzahlen sind Flaechenanteile, ein Gitter aus jedem zweiten
-  *  Pixel liefert dieselben Werte bei einem Viertel der Arbeit. Bei rund 32000 Pixeln je Zelle
-  *  war das Vollbild-Abtasten der teuerste Schritt der gesamten Analyse. */
+ /** Sampling step in pixels. All metrics are area fractions, so sampling every second pixel yields
+  *  the same values at a quarter of the work. With roughly 32000 pixels per cell, full-frame
+  *  sampling was the most expensive step of the whole analysis. */
  private const val STEP=2
  fun classify(width:Int,height:Int,argb:IntArray,b:GridBounds):Map<Cell,CellScores>{
   require(argb.size==width*height)

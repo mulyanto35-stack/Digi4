@@ -10,10 +10,10 @@ import org.junit.Test
 import javax.imageio.ImageIO
 
 /**
- * Regression gegen einen echten Geraete-Frame (Samsung SM-G998B, 1080x2400, 20:9).
- * Auf diesem Seitenverhaeltnis fuellt das Spielfeld die Panelbreite fast randlos aus
- * (linke Kante bei ~2,5% der Breite) und die Trennlinien sind mit einem Gradienten
- * von ~20 deutlich weicher als in synthetischen Testbildern.
+ * Regression against a real device frame (Samsung SM-G998B, 1080x2400, 20:9).
+ * At this aspect ratio the playfield fills the panel width almost edge to edge
+ * (left edge at ~2.5% of the width) and the dividing lines, with a gradient
+ * of ~20, are much softer than in synthetic test images.
  */
 class RealScreenshotDetectionTest {
 

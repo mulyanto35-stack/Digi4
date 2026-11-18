@@ -15,30 +15,30 @@ import java.io.File
 import java.io.FileOutputStream
 
 object CaptureFrameAnalyzer {
-    /** Kandidatenschwelle. [GridDetector] prueft bereits Aequidistanz, Seitenverhaeltnis, Abdeckung
-     *  und ein Kontrastverhaeltnis von >=5 zum Hintergrund. Die Konfidenz misst nur, wie klar die
-     *  Linien sind - und das schwankt stark mit der Szenengrafik des Spiels (helle Szene ~0.84,
-     *  dunkle Nachtszene ~0.74 bei identischer, korrekter Geometrie). Eine hohe Schwelle verwirft
-     *  hier also korrekte Erkennungen. Die eigentliche Absicherung ist [STABLE_FRAMES]. */
+    /** Candidate threshold. [GridDetector] already checks equidistance, aspect ratio, coverage
+     *  and a contrast ratio of >=5 against the background. Confidence only measures how clear the
+     *  lines are, and that varies strongly with the game's scene graphics (bright scene ~0.84,
+     *  dark night scene ~0.74 with identical, correct geometry). A high threshold would therefore
+     *  reject correct detections. The real safeguard is [STABLE_FRAMES]. */
     private const val CANDIDATE_MIN = .55
-    /** So viele aufeinanderfolgende Analysen muessen dieselben Bounds liefern, bevor kalibriert wird. */
+    /** This many consecutive analyses must yield the same bounds before calibration is accepted. */
     private const val STABLE_FRAMES = 3
-    /** Zulaessige Abweichung je Kante zwischen zwei Frames in Pixeln. */
+    /** Allowed deviation per edge between two frames, in pixels. */
     private const val BOUNDS_TOLERANCE = 4
-    /** Mindestabstand zwischen zwei Diagnose-PNGs in Millisekunden. */
+    /** Minimum interval between two diagnostic PNGs, in milliseconds. */
     private const val DIAGNOSTIC_INTERVAL = 300_000L
     @Volatile private var lastDiagnostic = 0L
-    /** Dipakai ulang antar-frame (hanya dipanggil dari thread analisis): menghindari ~14 MB alokasi per analisis
-     *  pada 720x1600 dan menekan GC. Dilepas saat capture berhenti. */
+    /** Reused between frames (only touched from the analysis thread): avoids ~14 MB of allocations per
+     *  analysis at 720x1600 and reduces GC pressure. Released when capture stops. */
     private var paddedBitmap: Bitmap? = null
     private var pixelBuffer: IntArray? = null
-    fun release() { paddedBitmap = null; pixelBuffer = null } // tanpa recycle(): thread analisis mungkin masih memakainya; GC yang melepas
+    fun release() { paddedBitmap = null; pixelBuffer = null } // no recycle(): the analysis thread may still be using the bitmap; the GC frees it
 
     @Volatile private var calibrated: de.robinthor.digiworldexplorer.detection.GridDetection? = null
     @Volatile private var pending: de.robinthor.digiworldexplorer.detection.GridDetection? = null
     @Volatile private var pendingCount = 0
-    /** Solange keine Kalibrierung steht, sucht [GridDetector] noch nach Kanten und darf das Overlay
-     *  nicht im Bild haben. Danach sind die Bounds fixiert und das Overlay kann sichtbar bleiben. */
+    /** While no calibration exists, [GridDetector] is still searching for edges and the overlay must
+     *  not be in the image. Afterwards the bounds are fixed and the overlay may stay visible. */
     val isCalibrated: Boolean get() = calibrated != null
     fun resetCalibration(){ calibrated=null; pending=null; pendingCount=0; de.robinthor.digiworldexplorer.strategy.AutoMoveController.reset(); de.robinthor.digiworldexplorer.accessibility.DigiWorldAccessibilityService.instance?.clearCalibrationOverlay() }
     data class Result(val detected:Boolean,val confidence:Double,val output:String)

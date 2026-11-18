@@ -144,10 +144,10 @@ class ScreenCaptureService : Service() {
         val density: Int
         val metricsMode: String
         if (Build.VERSION.SDK_INT < 30) {
-            // Android 9/10: resources.displayMetrics hanya berisi area aplikasi TANPA navigation bar
-            // (mis. 720x1504 pada layar 720x1600). Tap dari AccessibilityService memakai koordinat
-            // layar penuh, jadi frame capture HARUS berukuran layar penuh (real metrics); kalau tidak,
-            // VirtualDisplay di-letterbox dan semua koordinat grid/tombol bergeser.
+            // Android 9/10: resources.displayMetrics only covers the app area WITHOUT the navigation bar
+            // (e.g. 720x1504 on a 720x1600 screen). Taps from the AccessibilityService use full-screen
+            // coordinates, so the capture frame MUST be full-screen size (real metrics); otherwise the
+            // VirtualDisplay is letterboxed and every grid/button coordinate is shifted.
             val real = android.util.DisplayMetrics()
             @Suppress("DEPRECATION")
             getSystemService(WindowManager::class.java).defaultDisplay.getRealMetrics(real)

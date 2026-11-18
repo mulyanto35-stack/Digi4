@@ -9,41 +9,41 @@ enum class ActionKind{MOVE,ATTACK,DASH}
 data class Action(val kind:ActionKind,val target:Cell,val direction:Direction,val reason:String)
 
 object MovementPlanner{
- /** Pyramiden sind keine Sackgasse: Mit Krallen zerstoert das Hineinlaufen das Hindernis.
-  *  Das kostet eine Kralle, einen zusaetzlichen Tap und die Zerschlag-Animation, deshalb sind
-  *  Umwege bis zu drei Feldern guenstiger als ein Durchbruch. */
+ /** Pyramids are not dead ends: with claws, walking into one destroys the obstacle. That costs a
+  *  claw, an additional tap and the smash animation, so detours of up to three cells are cheaper
+  *  than a breakthrough. */
  private const val OBSTACLE_COST=4
- /** So viele Krallen bleiben als Reserve fuer eine echte Sackgasse liegen. Solange nicht mehr
-  *  als das vorhanden ist, wird jede Pyramide umgangen - auch auf grossen Umwegen. */
+ /** This many claws are kept as a reserve for a genuine dead end. As long as no more than that
+  *  are available, every pyramid is avoided - even on large detours. */
  const val CLAW_RESERVE=1
- /** So weit plant der Bot nach rechts voraus, wenn kein Collectable sichtbar ist. */
+ /** How far the bot plans ahead to the right when no collectable is visible. */
  const val LOOKAHEAD=3
- /** Dash lohnt sich erst bei mehr als so vielen Pyramiden in den naechsten [LOOKAHEAD] Feldern. */
+ /** Dash only pays off with more than this many pyramids in the next [LOOKAHEAD] cells. */
  private const val DASH_PYRAMIDS=2
- /** Ausserhalb einer Blockade nur dashen, wenn mehr als so viele Ladungen uebrig sind. */
+ /** Outside a blockade, only Dash if more than this many charges are left. */
  private const val DASH_RESERVE=1
- /** Gewicht der Vorausschau je freiem Feld. Muss gross genug sein, um den Rechts-Bonus zu
-  *  ueberstimmen, wenn die Zeile zugebaut ist. */
+ /** Weight of the look-ahead per free cell. Must be large enough to outvote the rightward bonus
+  *  when the row is built up. */
  private const val LOOKAHEAD_WEIGHT=20
- /** Abschlag fuer ein Feld, das erst zerschlagen werden muss. Muss den Rechts-Bonus klar
-  *  ueberwiegen, sonst rammt der Bot die Pyramide, obwohl eine Zeile weiter alles frei ist. */
+ /** Penalty for a cell that must first be smashed. Must clearly outweigh the rightward bonus,
+  *  otherwise the bot rams the pyramid although one row further everything is free. */
  private const val BLOCKED_PENALTY=90
- /** Ab diesem Wert gilt eine Zelle als Collectable. */
+ /** From this value on, a cell counts as a collectable. */
  private const val ITEM_SCORE=.06
- /** Ab diesem Orangeanteil ist das Collectable eine Energiekugel und keine Kralle. */
+ /** From this orange share on, the collectable is an energy orb and not a claw. */
  private const val ENERGY_ORANGE=.06
- /** Energiekugeln verschwinden von selbst wieder, Krallen bleiben liegen. Ein Umweg von bis zu
-  *  so vielen Feldern lohnt sich deshalb, um die Energie zuerst einzusammeln. */
+ /** Energy orbs disappear on their own, claws stay lying around. A detour of up to this many
+  *  cells is therefore worth it to collect the energy first. */
  private const val ENERGY_DETOUR=3
- /** Abschlag fuer ein Feld, von dem aus die rechte Spalte nicht mehr erreichbar ist. Muss den
-  *  Rechts-Bonus samt Vorausschau ueberwiegen, sonst laeuft der Bot weiter in die Tasche. */
+ /** Penalty for a cell from which the right column is no longer reachable. Must outweigh the
+  *  rightward bonus including the look-ahead, otherwise the bot keeps walking into the pocket. */
  private const val DEAD_END_PENALTY=250
 
  private data class Node(val cost:Int,val cell:Cell,val path:List<Action>):Comparable<Node>{override fun compareTo(o:Node)=cost.compareTo(o.cost)}
 
  /**
-  * @param claws gelesener Krallenvorrat, `null` wenn die Zahl nicht sicher gelesen wurde. Beides
-  *  wird gleich vorsichtig behandelt: Zerschlagen ist dann nur erlaubt, wenn sonst gar nichts geht.
+  * @param claws read claw supply, `null` if the number was not reliably read. Both are
+  * treated equally cautiously: smashing is then only allowed if nothing else works at all.
   */
  fun choose(
   player:Cell,
@@ -159,9 +159,9 @@ object MovementPlanner{
   val escaping=candidates.filter{(_,action)->action.kind!=ActionKind.MOVE||escapesRight(action.target,cells,blockedCells+player,mayBreak,settings)}
   return (escaping.ifEmpty{candidates}).maxByOrNull{it.first}?.second
  }
- /** Wie viele der naechsten [LOOKAHEAD] Felder rechts von [from] frei begehbar sind, normiert
-  *  auf [LOOKAHEAD]. Am rechten Rand stehen weniger Felder zur Verfuegung - ohne Normierung
-  *  wuerde die Kante sonst systematisch schlechter bewertet als die Brettmitte. */
+ /** How many of the next [LOOKAHEAD] cells to the right of [from] are freely walkable, normalised
+  *  to [LOOKAHEAD]. Fewer cells are available at the right edge - without normalisation the edge
+  *  would otherwise be systematically rated worse than the middle of the board. */
  private fun freeAhead(from:Cell,cells:Map<Cell,CellScores>):Int{
   val ahead=(1..LOOKAHEAD).map{Cell(from.row,from.col+it)}.filter{it.col<=4}
   if(ahead.isEmpty())return LOOKAHEAD
@@ -169,9 +169,9 @@ object MovementPlanner{
  }
 
  /**
-  * Weg zum naechsten Collectable - Energiekugeln zuerst. Sie verschwinden nach kurzer Zeit von
-  * selbst, waehrend Krallen liegen bleiben. Ohne diese Bevorzugung nahm der Bot immer nur das
-  * naechstgelegene Symbol und lief an einer bereits sichtbaren Energie vorbei, bis sie weg war.
+  * Path to the nearest collectable - energy orbs first. They vanish after a short time on their
+  * own, while claws stay lying around. Without this preference the bot always took only the
+  * nearest symbol and walked past an already visible energy orb until it was gone.
   */
  private fun itemPath(player:Cell,cells:Map<Cell,CellScores>,blocked:Set<Cell>,settings:DwsNavigationSettings):List<Action>?{
   val items=cells.filter{(cell,s)->
@@ -191,10 +191,10 @@ object MovementPlanner{
  }
 
  /**
-  * Bei gleichartigen Items gewinnt nicht stumpf der kuerzeste Einzelweg. Ein Ziel links vom
-  * Spieler bekommt eine deutliche Ruecklauf-Strafe, waehrend Ziele weiter rechts bevorzugt
-  * werden. Dadurch sammelt der Bot eine sichtbare Reihe in Laufrichtung ein, statt fuer ein
-  * nahes Item umzudrehen und die vorderen Items durch den Bildlauf zu verlieren.
+  * For items of the same kind the shortest single path does not simply win. A target to the left
+  * of the player gets a clear backtracking penalty, while targets further right are preferred.
+  * As a result the bot collects a visible row in walking direction instead of turning around for
+  * a nearby item and losing the items ahead through the scrolling.
   */
  private fun forwardItemPath(player:Cell,targets:Set<Cell>,cells:Map<Cell,CellScores>,blocked:Set<Cell>,settings:DwsNavigationSettings):List<Action>? =
   targets.mapNotNull{target->
@@ -206,9 +206,9 @@ object MovementPlanner{
   }.minWithOrNull(compareBy<Triple<Int,Int,List<Action>>>{it.first}.thenBy{it.second})?.third
 
  /**
-  * Ist von [from] aus die rechte Spalte ueberhaupt noch erreichbar? Nur so laesst sich eine von
-  * Pyramiden umschlossene Tasche von einem normalen Umweg unterscheiden - das Brett ist mit 5x5
-  * klein genug, dass die vollstaendige Suche billiger ist als jede Heuristik.
+  * Is the right column still reachable from [from] at all? Only this distinguishes a pocket
+  * enclosed by pyramids from a normal detour - at 5x5 the board is small enough that the complete
+  * search is cheaper than any heuristic.
   */
  private fun escapesRight(from:Cell,cells:Map<Cell,CellScores>,blocked:Set<Cell>,passObstacles:Boolean,settings:DwsNavigationSettings):Boolean{
   if(from.col>=4)return true
@@ -236,13 +236,13 @@ object MovementPlanner{
  }
 
  /**
-  * Wie [choose], liefert aber zusaetzlich die naechsten Schritte derselben Route, damit sie ohne
-  * erneute Bildauswertung hintereinander getippt werden koennen.
+  * Like [choose], but additionally returns the next steps of the same route so they can be
+  * tapped one after another without re-analysing the image.
   *
-  * Gebuendelt wird nur, wenn ein Fehltritt folgenlos bliebe: Verschluckt das Spiel einen Tap,
-  * verschiebt sich die ganze Kette um ein Feld. Deshalb muss der Korridor inklusive einer
-  * Sicherheitsspalte frei von Pyramiden sein - sonst wuerde ein verschluckter Tap eine Kralle
-  * verbrauchen. Im Zweifel bleibt es bei einem einzelnen Schritt.
+  * Steps are only bundled if a misstep would have no consequences: if the game swallows a tap,
+  * the whole chain shifts by one cell. Therefore the corridor including one safety column must
+  * be free of pyramids - otherwise a swallowed tap would consume a claw. When in doubt, it stays
+  * a single step.
   */
  fun plan(
   player:Cell,
@@ -282,7 +282,7 @@ object MovementPlanner{
   return if(corridorClear(player,route,cells))route else single
  }
 
- /** Alle Felder der Route plus je eine Spalte davor und dahinter muessen frei sein. */
+ /** All cells of the route plus one column before and behind each must be free. */
  private fun corridorClear(player:Cell,route:List<Action>,cells:Map<Cell,CellScores>):Boolean{
   val rows=(route.map{it.target.row}+player.row).toSet()
   val cols=(route.map{it.target.col}+player.col)

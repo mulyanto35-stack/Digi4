@@ -1,30 +1,30 @@
 package de.robinthor.digiworldexplorer.detection
 
-/** Bildschirmrechteck einer HUD-Zahl, damit das Overlay sie einkasten kann. */
+/** Screen rectangle of a HUD number, so the overlay can draw a box around it. */
 data class HudBox(val left: Int, val top: Int, val right: Int, val bottom: Int)
 
-/** Gelesene Vorratszahlen. `null` heisst "nicht sicher erkannt" und muss vorsichtig behandelt werden. */
+/** Values read for the supplies. `null` means "not reliably recognised" and must be handled cautiously. */
 data class HudCounters(
     val claws: Int? = null,
     val clawsBox: HudBox? = null,
     val dash: Int? = null,
     val dashBox: HudBox? = null,
-    /** Normalformen der Ziffern, die zu keiner Vorlage passten - Rohmaterial fuer neue Vorlagen. */
+    /** Normalised shapes of digits that matched no template - raw material for new templates. */
     val unknown: List<String> = emptyList(),
 )
 
 /**
- * Liest die Vorratszahlen fuer Angriffskrallen und Dash unter dem Spielfeld.
+ * Reads the supply counts for attack claws and Dash below the playfield.
  *
- * Die Ziffern sind Outline-Glyphen: nur die Kontur ist weiss, die Fuellung liegt farblich darunter.
- * Das Spiel rendert sie immer pixelgleich an derselben Stelle, deshalb wird die Kontur nicht
- * interpretiert, sondern auf ein festes Raster normiert und direkt mit aufgezeichneten Vorlagen
- * verglichen. Ein Formklassifikator waere bei dieser sehr fetten, leicht kursiven Schrift deutlich
- * unzuverlaessiger - auf 9x6 normiert laufen etwa Eins und Zwei fast zu denselben Bloecken zusammen.
+ * The digits are outline glyphs: only the contour is white, the fill sits colour-wise beneath it.
+ * The game always renders them pixel-identically at the same position, so the contour is not
+ * interpreted but normalised to a fixed grid and compared directly against recorded templates.
+ * A shape classifier would be considerably less reliable with this very bold, slightly italic
+ * typeface - normalised to 9x6, a one and a two almost collapse into the same blocks.
  *
- * Alle Fenster sind relativ zum kalibrierten Raster angegeben. Gemessen auf dem Geraet
- * (1080x2400, Raster 27/847/1021/1664): Krallenzahl auf y=2142..2170, Dashzahl auf y=2227..2256,
- * beide ab x=290; links davon liegen nur das Symbol und der Nachwachs-Timer.
+ * All windows are given relative to the calibrated grid. Measured on the device
+ * (1080x2400, grid 27/847/1021/1664): claw count at y=2142..2170, Dash count at y=2227..2256,
+ * both starting at x=290; to the left of that are only the symbol and the regrowth timer.
  */
 object HudCounterReader {
     private const val CLAWS_CENTER = .602
@@ -34,28 +34,28 @@ object HudCounterReader {
     internal const val X_TO = .42
     private const val WHITE = 225
 
-    /** Hoechstens so viele leere Spalten gelten noch als Teil derselben Ziffer. */
+    /** At most this many empty columns still count as part of the same digit. */
     private const val COLUMN_GAP = 1
 
-    /** Eine Ziffer muss mindestens so hoch sein, sonst ist es Bildrauschen. */
+    /** A digit must be at least this tall, otherwise it is image noise. */
     private const val MIN_HEIGHT = 12
 
-    /** Ab so viel Kontur gilt eine Rasterzelle der Normalform als gesetzt. */
+    /** From this much contour on, a grid cell of the normalised shape counts as set. */
     private const val CELL_ON = 35
 
     internal const val ROWS = 16
     internal const val COLS = 12
 
-    /** Groesster noch akzeptierter Abstand zur besten Vorlage (von [ROWS]*[COLS] Feldern). */
+    /** Largest still-accepted distance to the best template (out of [ROWS]*[COLS] cells). */
     private const val MAX_DISTANCE = 26
 
-    /** So viel besser muss die beste Vorlage gegenueber der zweitbesten sein. */
+    /** By this much the best template must beat the second best. */
     private const val MIN_MARGIN = 8
 
     /**
-     * Aufgezeichnete Konturformen. Belegt sind nur Ziffern, die auf dem Geraet tatsaechlich
-     * beobachtet wurden. Alles andere liefert bewusst `null` statt einer Vermutung - die
-     * Bewegungsplanung behandelt "unbekannt" ohnehin so vorsichtig wie "fast leer".
+     * Recorded contour shapes. Only digits actually observed on the device are populated.
+     * Anything else deliberately yields `null` instead of a guess - movement planning
+     * treats "unknown" as cautiously as "almost empty" anyway.
      */
     private const val FIVE =
         "001111111110" +   // ..##########
@@ -92,8 +92,8 @@ object HudCounterReader {
     }
 
     /**
-     * Liest die Zahl eines Bandes. Der Kasten wird auch dann geliefert, wenn die Ziffer unlesbar
-     * bleibt - sichtbar ist sie ja trotzdem, und das Overlay soll das ehrlich anzeigen.
+     * Reads the number of one band. The box is returned even when the digit stays unreadable -
+     * it is visible after all, and the overlay should show that honestly.
      */
     internal fun readBand(
         width: Int,
@@ -180,7 +180,7 @@ object HudCounterReader {
         return groups
     }
 
-    /** Rastert die Kontur der Glyphe auf [ROWS]x[COLS], unabhaengig von ihrer Pixelgroesse. */
+    /** Rasterises the glyph contour to [ROWS]x[COLS], independent of its pixel size. */
     private fun normalize(ink: BooleanArray, w: Int, cx0: Int, cx1: Int, ry0: Int, ry1: Int): String {
         val sw = cx1 - cx0 + 1
         val sh = ry1 - ry0 + 1

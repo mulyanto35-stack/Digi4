@@ -2,7 +2,7 @@ package de.robinthor.digiworldexplorer.input
 
 import kotlin.random.Random
 
-/** Kleine Eingabevarianz, die immer innerhalb eines vom Aufrufer garantierten Innenradius bleibt. */
+/** Small input variance that always stays within an inner radius guaranteed by the caller. */
 object SafeTapRandomizer {
     fun point(x: Float, y: Float, safeRadiusX: Float, safeRadiusY: Float, random: Random = Random.Default): Pair<Float, Float> {
         val rx = safeRadiusX.coerceAtLeast(0f)

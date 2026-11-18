@@ -1,19 +1,19 @@
 package de.robinthor.digiworldexplorer.detection
 
 /**
- * Findet den blauen Dash-Knopf unterhalb des Spielfelds. Absolute Pixelkoordinaten waeren
- * geraete- und panelabhaengig, deshalb wird der Knopf ueber seine Farbe gesucht: er ist die
- * grosse, kraeftig cyan-blaue Flaeche unterhalb des Rasters; bei mehreren blauen Tasten gewinnt die linke. Der dunkelblaue
- * Ueberschriftentext faellt durch die Gruen-Untergrenze heraus.
+ * Finds the blue Dash button below the playfield. Absolute pixel coordinates would depend on
+ * the device and panel, so the button is located by its colour: it is the large, strongly
+ * cyan-blue area below the grid; when several blue buttons exist, the left one wins. The dark
+ * blue heading text is excluded by the green lower bound.
  */
 object DashButtonLocator{
  private const val MIN_SAMPLES=350
  private const val STEP=2
- /** Piksel yang cocok dikelompokkan ke sel kasar sebelum dicari bagian yang saling terhubung. */
+ /** Matching pixels are grouped into coarse cells before searching for connected regions. */
  private const val CELL=12
  private const val CELL_MIN_HITS=6
- /** UI baru punya DUA tombol bulat biru yang mirip. Tombol Dash = tombol paling KIRI.
-  *  Kalau yang terketuk ternyata tombol sebelahnya, ubah ke false (ambil yang paling kanan). */
+ /** The newer UI has TWO similar round blue buttons. The Dash button is the LEFTMOST one.
+  *  If the wrong neighbouring button gets tapped, set this to false (pick the rightmost). */
  private const val DASH_IS_LEFTMOST=true
 
  private class Blob(val x:Double,val y:Double,val n:Int)
@@ -64,7 +64,7 @@ object DashButtonLocator{
   return pick.x.toFloat() to pick.y.toFloat()
  }
 
- /** Sicherer relativer Mittelpunkt nur fuer den expliziten experimentellen Dash-Spam-Fallback. */
+ /** Safe relative centre point, used only by the explicit experimental Dash-spam fallback. */
  fun relativeFallback(width:Int,height:Int,bounds:GridBounds):Pair<Float,Float>?{
   val gridWidth=(bounds.right-bounds.left).toFloat();val gridHeight=(bounds.bottom-bounds.top).toFloat()
   if(gridWidth<=0f||gridHeight<=0f)return null

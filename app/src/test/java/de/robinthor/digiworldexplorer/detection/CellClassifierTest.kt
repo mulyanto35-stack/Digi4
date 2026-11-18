@@ -11,7 +11,7 @@ class CellClassifierTest{
   for(y in b.top+cell.row*ch+iy until b.top+(cell.row+1)*ch-iy-(ch*.12).toInt())
    for(x in b.left+cell.col*cw+ix until b.left+(cell.col+1)*cw-ix)this[y*w+x]=color
  }
- /** Blob in der Zellmitte, Groesse als Anteil der Zelle. */
+ /** Blob in the cell centre, size as a fraction of the cell. */
  private fun IntArray.blob(cell:Cell,color:Int,part:Double){
   val cw=(b.right-b.left)/5;val ch=(b.bottom-b.top)/5
   val cx=b.left+cell.col*cw+cw/2;val cy=b.top+cell.row*ch+ch/2
@@ -19,7 +19,7 @@ class CellClassifierTest{
   for(y in cy-ry until cy+ry)for(x in cx-rx until cx+rx)this[y*w+x]=color
  }
 
- /** Das Sprite ist ein dunkler Koerper mit gelben Augen auf hell markiertem Feld. */
+ /** The sprite is a dark body with yellow eyes on a brightly highlighted cell. */
  @Test fun classifiesRelativeCellsAtArbitrarySize(){
   val p=canvas()
   p.fill(Cell(2,1),0xff2090d0.toInt());p.blob(Cell(2,1),0xff101820.toInt(),.55);p.blob(Cell(2,1),0xffffd000.toInt(),.20)
@@ -31,9 +31,9 @@ class CellClassifierTest{
  }
 
  /**
-  * Blendet das Spiel "Bewegung zum ausgewaehlten Ort ist nicht moeglich." ein, deckt weisse
-  * Schrift mehrere Zellen ab. Fruehere Fassungen haben diesen Helligkeitsanteil als Spielfigur
-  * gewertet - der Bot ist dann der Meldung hinterhergetippt statt der Figur.
+  * When the game shows "Movement to the selected location is not possible.", white text covers
+  * several cells. Earlier versions counted this brightness share as the player character - the
+  * bot then tapped after the message instead of the character.
   */
  @Test fun dialogTextIsNeitherPlayerNorItem(){
   val p=canvas()
@@ -56,7 +56,7 @@ class CellClassifierTest{
   val cells=CellClassifier.classify(w,h,p,b)
   for(col in 0..4){val score=cells.getValue(Cell(4,col));assertFalse("wall obstacle col=$col",score.obstacle());assertTrue("wall item col=$col",score.item<.06)}
  }
- /** Das kleine gelb-schwarze Klauensymbol belegt deutlich weniger Flaeche als eine Energiekarte. */
+ /** The small yellow-black claw symbol occupies considerably less area than an energy card. */
  @Test fun smallYellowClawIsCollectable(){
   val p=canvas();val claw=Cell(2,2)
   p.fill(claw,0xff164050.toInt());p.blob(claw,0xffffd000.toInt(),.13)

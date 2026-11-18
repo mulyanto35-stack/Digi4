@@ -7,65 +7,65 @@ class MovementPlannerTest{
  @Test fun prefersRight(){assertEquals(Cell(2,3),MovementPlanner.choose(Cell(2,2),board(),emptyList())?.target)}
  @Test fun routesToItem(){val a=MovementPlanner.choose(Cell(2,2),board(items=setOf(Cell(1,2))),emptyList());assertEquals(Cell(1,2),a?.target);assertEquals(ActionKind.MOVE,a?.kind)}
 
- /** Freie Zeile: es werden gleich mehrere Rechtsschritte am Stueck geplant. */
+ /** Free row: several rightward steps are planned in one go. */
  @Test fun burstsThreeStepsOnClearRow(){
   val p=MovementPlanner.plan(Cell(2,0),board(),emptyList(),maxSteps=3)
   assertEquals(listOf(Cell(2,1),Cell(2,2),Cell(2,3)),p.map{it.target})
  }
 
- /** Verschluckt das Spiel einen Tap, verschiebt sich die Kette um ein Feld. Steht in dieser
-  *  Sicherheitsspalte eine Pyramide, wird nicht gebuendelt - sonst ginge eine Kralle verloren. */
+ /** If the game swallows a tap, the chain shifts by one cell. If a pyramid stands in this safety
+  *  column, nothing is bundled - otherwise a claw would be lost. */
  @Test fun noBurstWhenPyramidCouldBeHitAfterMissedTap(){
   val p=MovementPlanner.plan(Cell(2,0),board(setOf(Cell(2,3))),emptyList(),claws=5,maxSteps=3)
   assertEquals(1,p.size)
  }
 
- /** Zum Collectable wird der Pfad gebuendelt, nicht nur der erste Schritt. */
+ /** Towards a collectable the path is bundled, not just the first step. */
  @Test fun burstsAlongItemRoute(){
   val p=MovementPlanner.plan(Cell(2,0),board(items=setOf(Cell(2,3))),emptyList(),maxSteps=2)
   assertEquals(listOf(Cell(2,1),Cell(2,2)),p.map{it.target})
  }
 
- /** Zerschlagen wird nie gebuendelt - danach muss das Bild neu bewertet werden. */
+ /** Smashing is never bundled - the image must be re-evaluated afterwards. */
  @Test fun neverBurstsAttacks(){
   val walls=(0..4).map{Cell(it,2)}.toSet()
   val p=MovementPlanner.plan(Cell(2,1),board(walls,setOf(Cell(2,3))),emptyList(),claws=3,maxSteps=3)
   assertEquals(1,p.size);assertEquals(ActionKind.ATTACK,p[0].kind)
  }
 
- /** Auf dem Weg zum Item wird nur zerschlagen, wenn es keinen Bogen darum herum gibt. Hier sind
-  *  die Nachbarzeilen zugebaut, der Durchbruch ist also der einzige bezahlbare Weg. */
+ /** On the way to the item, smashing only happens if there is no way around. Here the adjacent
+  *  rows are built up, so the breakthrough is the only affordable way. */
  @Test fun attacksBlockingPyramidOnItemRouteWhenWalledIn(){
   val walls=(0..4).map{Cell(it,2)}.toSet()
   val a=MovementPlanner.choose(Cell(2,1),board(walls,setOf(Cell(2,3))),emptyList(),claws=3)
   assertEquals(Cell(2,2),a?.target);assertEquals(ActionKind.ATTACK,a?.kind)
  }
 
- /** Steht ein kurzer Bogen zur Verfuegung, bleibt die Pyramide stehen - auch mit vollem Vorrat. */
+ /** If a short detour is available, the pyramid stays standing - even with a full supply. */
  @Test fun prefersDetourOverBreakingWithManyClaws(){
   val a=MovementPlanner.choose(Cell(2,1),board(setOf(Cell(2,2)),setOf(Cell(2,3))),emptyList(),claws=5)
   assertEquals(ActionKind.MOVE,a?.kind)
  }
 
- /** Mit nur der Reserve wird die Pyramide rechts umgangen statt zerschlagen. */
+ /** With only the reserve, the pyramid is bypassed to the right instead of smashed. */
  @Test fun avoidsPyramidWithOnlyReserveClaw(){
   val a=MovementPlanner.choose(Cell(2,2),board(setOf(Cell(2,3))),emptyList(),claws=1)
   assertEquals(ActionKind.MOVE,a?.kind);assertNotEquals(Direction.RIGHT,a?.direction)
  }
 
- /** Unbekannte Zahl wird genauso vorsichtig behandelt wie "fast leer". */
+ /** An unknown number is treated as cautiously as "almost empty". */
  @Test fun avoidsPyramidWhenCountUnknown(){
   assertEquals(ActionKind.MOVE,MovementPlanner.choose(Cell(2,2),board(setOf(Cell(2,3))),emptyList(),claws=null)?.kind)
  }
 
- /** Ist wirklich kein Feld mehr frei, wird die Reservekralle eingesetzt. */
+ /** If really no cell is free anymore, the reserve claw is used. */
  @Test fun spendsReserveWhenCompletelyBoxedIn(){
   val walls=setOf(Cell(1,2),Cell(3,2),Cell(2,1),Cell(2,3))
   val a=MovementPlanner.choose(Cell(2,2),board(walls),emptyList(),claws=1)
   assertEquals(ActionKind.ATTACK,a?.kind);assertTrue(a?.reason.orEmpty().contains("Reserve"))
  }
 
- /** Ohne Krallen ist eine Pyramide eine Wand - dann lieber gar kein Zug als ein wirkungsloser Tap. */
+ /** Without claws a pyramid is a wall - then better no move at all than an ineffective tap. */
  @Test fun neverAttacksWithoutClaws(){
   val walls=setOf(Cell(1,2),Cell(3,2),Cell(2,1),Cell(2,3))
   assertNull(MovementPlanner.choose(Cell(2,2),board(walls),emptyList(),claws=0))
@@ -73,48 +73,48 @@ class MovementPlannerTest{
 
  @Test fun breaksOscillationAtRightEdge(){val h=listOf(Cell(4,3),Cell(4,4),Cell(4,3),Cell(4,4));assertEquals(Direction.UP,MovementPlanner.choose(Cell(4,4),board(),h)?.direction)}
 
- /** Bei freier Bahn zaehlt die Vorausschau: die Zeile mit drei freien Feldern gewinnt. */
+ /** With a clear path the look-ahead counts: the row with three free cells wins. */
  @Test fun prefersRowWithClearLookahead(){
   val blockedRow=setOf(Cell(2,2),Cell(2,3),Cell(2,4))
   val a=MovementPlanner.choose(Cell(2,1),board(blockedRow),emptyList())
   assertNotEquals(Direction.RIGHT,a?.direction)
  }
 
- /** Eine Dash-Ladung bleibt als Reserve fuer einen echten Stuck-Zustand erhalten. */
+ /** One Dash charge is kept as a reserve for a genuine stuck state. */
  @Test fun noDashWithoutReason(){
   val b=board(setOf(Cell(2,2),Cell(2,3)))
   assertNotEquals(ActionKind.DASH,MovementPlanner.choose(Cell(2,1),b,emptyList(),dashAvailable=true,dashCharges=1)?.kind)
  }
 
- /** Auch bei zwei Pyramiden wird nicht gedasht, solange ein freier Umweg existiert. */
+ /** Even with two pyramids no Dash is used as long as a free detour exists. */
  @Test fun noDashWhenTwoPyramidsHaveDetour(){
   val b=board(setOf(Cell(2,1),Cell(2,2)))
   assertNotEquals(ActionKind.DASH,MovementPlanner.choose(Cell(2,0),b,emptyList(),dashAvailable=true,dashCharges=2)?.kind)
  }
 
- /** Zwei Pyramiden voraus und eine vollstaendige Wand: jetzt ist Dash wirklich erzwungen. */
+ /** Two pyramids ahead and a complete wall: now Dash is truly forced. */
  @Test fun dashOnlyWhenWallHasNoDetour(){
   val walls=(0..4).flatMap{r->listOf(Cell(r,1),Cell(r,2))}.toSet()
   assertEquals(ActionKind.DASH,MovementPlanner.choose(Cell(2,0),board(walls),emptyList(),dashAvailable=true,dashCharges=2)?.kind)
  }
 
- /** Sichtbare Energie hat Vorrang; der Bot darf nicht daran vorbeidashen. */
+ /** Visible energy takes priority; the bot must not Dash past it. */
  @Test fun noDashPastVisibleEnergy(){
   val b=board(setOf(Cell(2,1),Cell(2,2)),setOf(Cell(4,4)))
   assertNotEquals(ActionKind.DASH,MovementPlanner.choose(Cell(2,0),b,emptyList(),dashAvailable=true,dashCharges=2)?.kind)
  }
 
- /** Positionspendeln allein verbraucht keinen Dash, wenn weiterhin ein freier Weg existiert. */
+ /** Position pacing alone does not use up a Dash if a free path still exists. */
  @Test fun noDashWhenStuckButFreeRouteExists(){
   assertNotEquals(ActionKind.DASH,MovementPlanner.choose(Cell(2,2),board(),emptyList(),dashAvailable=true,stuck=true)?.kind)
  }
 
- /** Ohne verfuegbaren Dash bleibt es beim normalen Zug. */
+ /** Without an available Dash, it stays with the normal move. */
  @Test fun noDashWhenUnavailable(){
   assertNotEquals(ActionKind.DASH,MovementPlanner.choose(Cell(2,2),board(),emptyList(),dashAvailable=false,stuck=true)?.kind)
  }
 
- /** Ein langer freier Umweg gewinnt immer gegen einen kurzen Angriffspfad. */
+ /** A long free detour always beats a short attack path. */
  @Test fun neverAttacksWhenLongDetourExists(){
   val walls=setOf(Cell(2,1),Cell(1,1),Cell(3,1))
   val a=MovementPlanner.choose(Cell(2,0),board(walls,setOf(Cell(2,2))),emptyList(),claws=5)
@@ -122,7 +122,7 @@ class MovementPlannerTest{
   assertNotEquals(Cell(2,1),a?.target)
  }
 
- /** In einer Drei-Felder-Tasche folgt der Bot dem Ausbruchspfad und greift an statt zu pendeln. */
+ /** In a three-cell pocket the bot follows the breakout path and attacks instead of pacing. */
  @Test fun attacksOutOfClosedPocket(){
   val wall=(0..4).map{Cell(it,2)}.toSet()
   val a=MovementPlanner.choose(Cell(4,1),board(wall),emptyList(),claws=1)
@@ -130,20 +130,20 @@ class MovementPlannerTest{
   assertEquals(Cell(4,2),a?.target)
  }
 
- /** Ohne Kralle bleibt in einer vollstaendigen Tasche nur der bestaetigte Notfall-Dash. */
+ /** Without a claw, only the confirmed emergency Dash remains in a complete pocket. */
  @Test fun emergencyDashWhenTrappedWithoutClaw(){
   val wall=(0..4).map{Cell(it,2)}.toSet()
   val a=MovementPlanner.choose(Cell(2,1),board(wall),emptyList(),dashAvailable=true,dashCharges=1,claws=0)
   assertEquals(ActionKind.DASH,a?.kind)
  }
 
- /** Gleichwertige Items vor dem Spieler werden vor einem naeheren Rueckweg eingesammelt. */
+ /** Equivalent items ahead of the player are collected before a nearer way back. */
  @Test fun prefersForwardItemOverBacktracking(){
   val a=MovementPlanner.choose(Cell(2,2),board(items=setOf(Cell(2,1),Cell(2,4))),emptyList())
   assertEquals(Direction.RIGHT,a?.direction)
  }
 
- /** In einer Tasche wird erst ein erreichbares Item genommen und danach gezielt ausgebrochen. */
+ /** In a pocket a reachable item is taken first and then a targeted breakout follows. */
  @Test fun collectsPocketItemBeforeBreakingOut(){
   val wall=(0..4).map{Cell(it,2)}.toSet()
   val a=MovementPlanner.choose(Cell(4,1),board(wall,setOf(Cell(3,1))),emptyList(),claws=1)
@@ -151,7 +151,7 @@ class MovementPlannerTest{
   assertEquals(Cell(3,1),a?.target)
  }
 
- /** Eine Seitenzelle ohne eigenen Ausgang wird nicht betreten, wenn der Aussenweg sichtbar ist. */
+ /** A side cell without its own exit is not entered if the outer path is visible. */
  @Test fun neverEntersVisibleCornerBeforeDetour(){
   val player=Cell(3,1)
   val walls=setOf(Cell(3,2),Cell(2,2),Cell(4,0),Cell(4,2))
@@ -161,7 +161,7 @@ class MovementPlannerTest{
   assertEquals(Direction.UP,a?.direction)
   assertNotEquals(Cell(4,1),a?.target)
  }
- /** Ein benachbartes Collectable gewinnt gegen ein weiter rechts liegendes, aber ferneres Ziel. */
+ /** An adjacent collectable beats one further right but more distant. */
  @Test fun adjacentItemBeatsFarForwardItem(){
   val a=MovementPlanner.choose(Cell(2,1),board(items=setOf(Cell(1,1),Cell(2,4))),emptyList())
   assertEquals(Direction.UP,a?.direction)
