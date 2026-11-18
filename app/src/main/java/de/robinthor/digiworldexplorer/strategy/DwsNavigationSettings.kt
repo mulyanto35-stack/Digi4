@@ -7,4 +7,6 @@ data class DwsNavigationSettings(
     val collectOnlyEnergy: Boolean = false,
     val betterEnergyCollect: Boolean = true,
     val blindStageFailedTap: Boolean = false,
+    /** Strategi 'hancurkan semua Pyramid': selama Kralle > 0, setiap Pyramid yang terjangkau diserang. */
+    val destroyAllPyramids: Boolean = false,
 )

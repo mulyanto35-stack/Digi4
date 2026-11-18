@@ -39,6 +39,10 @@ object MovementPlanner{
   *  Rechts-Bonus samt Vorausschau ueberwiegen, sonst laeuft der Bot weiter in die Tasche. */
  private const val DEAD_END_PENALTY=250
 
+ /** Pyramida hanya dikejar bila terjangkau dalam sebanyak ini langkah (inklusif serangan). Lebih jauh dari ini
+  *  papan akan bergulir sendiri; batas ini juga menjaga MAX_FAILED_ACTIONS di AutoMoveController tidak terpicu. */
+ private const val DESTROY_MAX_PATH=4
+
  private data class Node(val cost:Int,val cell:Cell,val path:List<Action>):Comparable<Node>{override fun compareTo(o:Node)=cost.compareTo(o.cost)}
 
  /**
@@ -65,6 +69,13 @@ object MovementPlanner{
    return Action(ActionKind.DASH,Cell(player.row,minOf(4,player.col+LOOKAHEAD)),Direction.RIGHT,"Dash-Spam bis HUD 0")
   }
 
+  // Strategi 'hancurkan semua Pyramid': selama masih ada Kralle, setiap Pyramid yang terjangkau dihancurkan.
+  // Tanpa Kralle (atau tanpa Pyramid dalam jangkauan) planner jatuh kembali ke rute normal yang juga
+  // mengumpulkan item Kralle baru.
+  if(settings.destroyAllPyramids&&(claws==null||claws>0)){
+   destroyRoute(player,cells,forbiddenObstacles,settings)?.let{return it}
+  }
+
   // Always search the complete visible board without spending a resource first. A long detour is
   // still preferable to attacking or dashing; resource use is considered only if this search
   // cannot reach an item or the right side at all.
@@ -89,6 +100,24 @@ object MovementPlanner{
    return Action(ActionKind.DASH,Cell(player.row,minOf(4,player.col+LOOKAHEAD)),Direction.RIGHT,"Notausgang ohne Kralle")
   }
   return null
+ }
+
+ /** Langkah berikutnya menuju Pyramid terdekat (energi dalam jarak dekat tetap diambil lebih dulu, karena hilang sendiri). */
+ private fun destroyRoute(player:Cell,cells:Map<Cell,CellScores>,forbidden:Set<Cell>,settings:DwsNavigationSettings):Action?{
+  val allObstacles=cells.filterValues{it.obstacle()}.keys
+  val targets=allObstacles.filter{it!=player&&it !in forbidden}
+  if(targets.isEmpty())return null
+  val energy=cells.filter{(c,s)->c!=player&&s.orange>ENERGY_ORANGE}.keys
+  if(energy.isNotEmpty()){
+   forwardItemPath(player,energy,cells,forbidden+allObstacles,settings)?.takeIf{it.size<=ENERGY_DETOUR}?.let{return it.first().copy(reason="Energie zuerst")}
+  }
+  val best=targets.mapNotNull{o->
+   shortestPath(player,setOf(o),cells,forbidden+(allObstacles-o),settings)?.takeIf{it.size<=DESTROY_MAX_PATH}?.let{path->
+    Triple(path.size+(player.col-o.col).coerceAtLeast(0)*6,-o.col,path)
+   }
+  }.minWithOrNull(compareBy<Triple<Int,Int,List<Action>>>{it.first}.thenBy{it.second})?.third?:return null
+  val first=best.first()
+  return first.copy(reason=if(first.kind==ActionKind.ATTACK)"Pyramide zerstoeren" else "Ziel Pyramide")
  }
  private fun allowedDirections(settings:DwsNavigationSettings):List<Direction> = if(settings.allowLeft) Direction.entries else Direction.entries.filterNot{it==Direction.LEFT}
 
@@ -260,6 +289,7 @@ object MovementPlanner{
   val first=choose(player,cells,history,dashAvailable,preview,forbiddenObstacles,dashCharges,stuck,claws,settings)?:return emptyList()
   val single=listOf(first)
   if(maxSteps<=1||first.kind!=ActionKind.MOVE)return single
+  if(first.reason=="Ziel Pyramide")return single
   val mayBreak=claws!=null&&claws>CLAW_RESERVE
   val blocked=forbiddenObstacles+(if(mayBreak)emptySet() else cells.filterValues{it.obstacle()}.keys)
    val itemRoute=itemPath(player,cells,blocked,settings)

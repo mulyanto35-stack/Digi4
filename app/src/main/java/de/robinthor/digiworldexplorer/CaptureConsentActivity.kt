@@ -66,6 +66,7 @@ class CaptureConsentActivity : ComponentActivity() {
         AutomationState.forceLegacyCaptureMetrics = settings.getBoolean("legacy_capture", true)
         AutomationState.summonTouchCorrection = settings.getBoolean("summon_touch_correction", false)
         AutomationState.dwsNavigationSettings = DwsNavigationSettings(
+            destroyAllPyramids = true,
             allowLeft = !neverLeft,
             forceForwardAttack = neverLeft,
             dashSpamUntilZero = supporter && settings.getBoolean("dws_dash_spam", false),
